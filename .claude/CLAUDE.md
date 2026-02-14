@@ -16,44 +16,53 @@ Coordinated through an async Python runtime (`asyncio`). Config via `pydantic-se
 ```
 tinker/
 ├── .claude/
-│   ├── CLAUDE.md              # project context, enforces DDD & TDD
+│   ├── CLAUDE.md                    # project context, enforces DDD & TDD
 │   ├── rules/
-│   │   ├── coding.md          # coding standards (SDD)
-│   │   ├── testing.md         # testing standards (SDD)
-│   │   └── documentation.md   # documentation standards (SDD)
-│   ├── commands/              # reusable workflows (/command-name)
-│   └── skills/                # complex workflows (/skill-name)
+│   │   ├── code-style.md            # coding standards (SDD)
+│   │   ├── testing.md               # testing standards (SDD)
+│   │   └── documentation.md         # documentation standards (SDD)
+│   ├── commands/
+│   │   └── implement.md             # step-by-step implement workflow
+│   └── skills/
+│       └── deploy/
+│           └── SKILL.md             # multi-step deploy to Pi
 ├── README.md
 ├── pyproject.toml
-├── .env                       # local env vars (git-ignored)
+├── .env                             # local env vars (git-ignored)
 ├── docs/
-│   └── architecture.md        # system design, module map (DDD)
+│   └── architecture.md              # system design, module map, data flow
 ├── src/
 │   └── tinker/
 │       ├── __init__.py
-│       ├── main.py            # async entry point — wires everything together
-│       ├── main.md            # spec: orchestration, startup/shutdown
-│       ├── brain.py           # LLM conversation (Claude API)
-│       ├── brain.md           # spec: conversation API, prompt contracts
-│       ├── ears.py            # STT / microphone input
-│       ├── ears.md            # spec: audio capture, whisper integration
-│       ├── voice.py           # TTS / speaker output
-│       ├── voice.md           # spec: synthesis pipeline, piper integration
-│       ├── eyes.py            # camera / computer vision
-│       ├── eyes.md            # spec: camera capture, face detection
-│       ├── body.py            # motor and servo control
-│       ├── body.md            # spec: movement commands, GPIO mapping
-│       ├── config.py          # pydantic-settings config from env
-│       └── config.md          # spec: env vars, settings schema
-├── tests/
-│   ├── test_brain.py
-│   ├── test_ears.py
-│   ├── test_voice.py
-│   ├── test_eyes.py
-│   └── test_body.py
-├── models/                    # downloaded STT/TTS model files (git-ignored)
-├── scripts/                   # helper scripts (deploy, setup, etc.)
-└── systemd/                   # systemd unit files for auto-start on Pi
+│       ├── main.py                  # async entry point
+│       ├── main.md                  # spec: orchestration
+│       ├── brain/
+│       │   ├── brain.md             # spec: conversation API, prompt contracts
+│       │   ├── test_brain.py        # ← TDD: written FIRST
+│       │   └── brain.py             # ← Code: written SECOND
+│       ├── ears/
+│       │   ├── ears.md              # spec: audio capture, whisper integration
+│       │   ├── test_ears.py
+│       │   └── ears.py
+│       ├── voice/
+│       │   ├── voice.md             # spec: synthesis pipeline, piper integration
+│       │   ├── test_voice.py
+│       │   └── voice.py
+│       ├── eyes/
+│       │   ├── eyes.md              # spec: camera capture, face detection
+│       │   ├── test_eyes.py
+│       │   └── eyes.py
+│       ├── body/
+│       │   ├── body.md              # spec: movement commands, GPIO mapping
+│       │   ├── test_body.py
+│       │   └── body.py
+│       └── config/
+│           ├── config.md            # spec: env vars, settings schema
+│           ├── test_config.py
+│           └── config.py
+├── models/                          # downloaded STT/TTS model files (git-ignored)
+├── scripts/                         # helper scripts (deploy, setup, etc.)
+└── systemd/                         # systemd unit files for auto-start on Pi
 ```
 
 ## How This Repo Works
@@ -63,24 +72,25 @@ tinker/
 | `.claude/CLAUDE.md` | Project context, enforces DDD & TDD | You | AI | Always, every conversation |
 | `.claude/rules/*.md` | Coding & testing standards (SDD) | You | AI | Auto, when touching matching files |
 | `.claude/commands/*.md` | Reusable workflows | You | AI | When you type /command-name |
-| `.claude/skills/` | Complex workflows + supporting files | You | AI | When you type /skill-name |
+| `.claude/skills/*/SKILL.md` | Complex workflows + supporting files | You | AI | When you type /skill-name |
 | `docs/architecture.md` | System design, module map (DDD) | You + humans | AI + humans | When understanding big picture |
-| `src/tinker/<module>.md` | Module API & details (DDD) | You (AI updates) | AI | When working on that module |
-| `tests/test_<module>.py` | Tests (TDD) | AI | AI | Written FIRST |
-| `src/tinker/<module>.py` | Implementation | AI | AI + humans | Written LAST, after tests exist |
+| `src/tinker/<module>/<module>.md` | Module API & details (DDD) | You (AI updates) | AI + humans | When working on that module |
+| `src/tinker/<module>/test_<module>.py` | Tests (TDD) | You or AI | AI + humans | Written FIRST |
+| `src/tinker/<module>/<module>.py` | Implementation | AI | AI + humans | Written LAST, after tests exist |
 
-## Development Flow
+## Development Standard
 
-For every feature or change:
+1. Update docs in `src/tinker/<module>/<module>.md` BEFORE writing code
+2. Write stubs with correct signatures
+3. Write test cases that compile but fail
+4. Implement code to make tests pass
+5. Run tests to verify
 
-1. **Read** `docs/architecture.md` to understand the big picture
-2. **Read** `src/tinker/<module>.md` for the module you're working on
-3. **Write/update** the companion `.md` spec BEFORE any code
-4. **Write tests** based on the spec (they should fail)
-5. **Write implementation** to make tests pass
-6. **Update** the companion `.md` if new APIs were added
+## Documentation Standard
 
-Never write code without a spec. Never write implementation before tests.
+- Each module has `src/tinker/<module>/<module>.md`
+- Document: purpose, public API, helpers, data structures, constraints
+- System architecture lives in `docs/architecture.md`
 
 ## Setup
 
@@ -96,7 +106,7 @@ cp .env.example .env   # fill in ANTHROPIC_API_KEY
 ## How to Test
 
 ```bash
-pytest tests/ -v
+pytest src/ -v
 ```
 
 ## How to Run
