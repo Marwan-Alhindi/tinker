@@ -28,22 +28,35 @@ The robot listens, thinks, speaks, sees, and moves — all coordinated through a
 
 Modules use a **body-part metaphor** for clarity:
 
+Each `.py` source file has a **companion `.md` spec** right beside it (DDD pattern).
+
 ```
 tinker/
 ├── CLAUDE.md
 ├── README.md
 ├── pyproject.toml
 ├── .env                    # local env vars (git-ignored)
+├── .claude/
+│   └── rules/              # SDD: coding, testing, and documentation standards
+├── docs/
+│   └── architecture.md     # big picture: module relationships, design decisions
 ├── src/
 │   └── tinker/
 │       ├── __init__.py
 │       ├── main.py         # async entry point — wires everything together
+│       ├── main.md         # spec: orchestration, startup/shutdown
 │       ├── brain.py        # LLM conversation (Claude API)
+│       ├── brain.md        # spec: conversation API, prompt contracts
 │       ├── ears.py         # STT / microphone input
+│       ├── ears.md         # spec: audio capture, whisper integration
 │       ├── voice.py        # TTS / speaker output
+│       ├── voice.md        # spec: synthesis pipeline, piper integration
 │       ├── eyes.py         # camera / computer vision
+│       ├── eyes.md         # spec: camera capture, face detection
 │       ├── body.py         # motor and servo control
-│       └── config.py       # pydantic-settings config from env
+│       ├── body.md         # spec: movement commands, GPIO mapping
+│       ├── config.py       # pydantic-settings config from env
+│       └── config.md       # spec: env vars, settings schema
 ├── tests/
 │   ├── test_brain.py
 │   ├── test_ears.py
@@ -54,6 +67,8 @@ tinker/
 ├── scripts/                # helper scripts (deploy, setup, etc.)
 └── systemd/                # systemd unit files for auto-start on Pi
 ```
+
+**Structure rule:** `docs/` = the big picture. `src/tinker/*.md` = the details, right next to the code.
 
 ## Hardware Components
 
@@ -76,6 +91,64 @@ tinker/
 - **State:** no global mutable state; pass dependencies explicitly
 - **Degradation:** graceful — if a subsystem (camera, mic) is unavailable, log a warning and continue without it
 - **Testing:** `pytest` with `pytest-asyncio` for async tests
+
+## SDD/DDD/TDD Workflow
+
+> "If you don't know what you want, neither does AI."
+> "Without docs, the AI has to read thousands of lines of code to guess what's going on — and it will guess wrong."
+> "Code first, doc later" is **WRONG**. Document first, always.
+
+### The Three Pillars
+
+**SDD — Spec/Standard-Driven Development**
+- `CLAUDE.md` and `.claude/rules/` define coding standards, documentation standards, and testing standards
+- AI reads the spec → reads the feature request → makes a plan → executes following the spec
+
+**DDD — Document-Driven Development**
+- `docs/` = architecture-level big picture (project overview, module relationships, design decisions)
+- `src/tinker/*.md` = file-level detail (interfaces, helpers, data structures) — companion `.md` next to each `.py`
+- Each companion `.md` defines: purpose, public API, input/output contracts, dependencies, error handling, test plan
+- Human writes docs initially; AI updates them as it adds new functions/APIs
+
+**TDD — Test-Driven Development**
+- Write failing tests based on the documented interface BEFORE implementation
+- Tests cover: happy path, edge cases, error conditions, mock mode behavior
+- Implement minimum code to make tests pass
+
+### Workflow Order for Every Feature
+
+```
+1. Document first  → write/update the companion .md spec
+2. Test second     → write tests based on the spec (they fail)
+3. Code last       → implement until tests pass
+4. Update docs     → AI updates the .md if new APIs were added
+```
+
+**Division of labor:**
+- Human writes specs, standards, and docs (the *what* and *how*)
+- AI writes tests and code (the *implementation*)
+- Module docs are hybrid — human writes initially, AI updates as it adds functions
+
+### Plan Mode
+
+For every non-trivial feature:
+
+1. **Plan** — AI reads spec + feature request → produces a plan answering:
+   - What files to read?
+   - What files to change?
+   - How to change from current state to desired state?
+2. **Review** — Human checks:
+   - Does it follow DDD → TDD → Code order?
+   - Are all files covered?
+   - Take your time. Ask questions. Request changes.
+3. **Execute (Ralph Loop)** — Once approved:
+   - Feed the plan as prompt
+   - AI executes one iteration
+   - Check success criteria
+   - If not done: feed plan + previous output back
+   - Repeat until done
+   - The plan stays constant, context accumulates
+4. **If it fails** — Don't re-run blindly. Look at *why* it failed and update the plan/docs/tests before trying again.
 
 ## Development Workflow
 
