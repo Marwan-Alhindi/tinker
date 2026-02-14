@@ -81,74 +81,42 @@ tinker/
 - **Chassis:** custom or kit-based wheeled platform
 - **Power:** 5V for Pi, separate battery pack for motors
 
-## Coding Conventions
+## Coding Standards
 
-- **Style:** PEP 8 enforced via `ruff`
-- **Type hints:** required on all function signatures
-- **Docstrings:** Google style, on public functions and classes
-- **Logging:** use `logging` module, never `print()` for runtime output
-- **Concurrency:** `asyncio` — no threads, no multiprocessing unless unavoidable
-- **State:** no global mutable state; pass dependencies explicitly
-- **Degradation:** graceful — if a subsystem (camera, mic) is unavailable, log a warning and continue without it
-- **Testing:** `pytest` with `pytest-asyncio` for async tests
+- PEP 8 enforced via `ruff`
+- Type hints required on all function signatures
+- No global mutable state; pass dependencies explicitly
+- `asyncio` for concurrency — no threads, no multiprocessing unless unavoidable
+- Graceful degradation — if a subsystem (camera, mic) is unavailable, log a warning and continue without it
+- Use `logging` module, never `print()` for runtime output
 
-## SDD/DDD/TDD Workflow
+## Documentation Standards
 
-> "If you don't know what you want, neither does AI."
-> "Without docs, the AI has to read thousands of lines of code to guess what's going on — and it will guess wrong."
-> "Code first, doc later" is **WRONG**. Document first, always.
+- Each `.py` source file has a companion `.md` spec right beside it
+- Companion `.md` defines: purpose, public API, input/output contracts, dependencies, error handling, test plan
+- `docs/` holds architecture-level docs (project overview, module relationships, design decisions)
+- `src/tinker/*.md` holds file-level detail (interfaces, helpers, data structures)
+- Google-style docstrings on public functions and classes
+- Always update the companion `.md` when adding or changing public APIs
 
-### The Three Pillars
+## Testing Standards
 
-**SDD — Spec/Standard-Driven Development**
-- `CLAUDE.md` and `.claude/rules/` define coding standards, documentation standards, and testing standards
-- AI reads the spec → reads the feature request → makes a plan → executes following the spec
+- `pytest` with `pytest-asyncio` for async tests
+- Tests live in `tests/test_<module>.py`, one per source module
+- Cover: happy path, edge cases, error conditions, mock mode behavior
+- Write tests based on the companion `.md` spec
+- All tests must pass before merging
 
-**DDD — Document-Driven Development**
-- `docs/` = architecture-level big picture (project overview, module relationships, design decisions)
-- `src/tinker/*.md` = file-level detail (interfaces, helpers, data structures) — companion `.md` next to each `.py`
-- Each companion `.md` defines: purpose, public API, input/output contracts, dependencies, error handling, test plan
-- Human writes docs initially; AI updates them as it adds new functions/APIs
+## Setup
 
-**TDD — Test-Driven Development**
-- Write failing tests based on the documented interface BEFORE implementation
-- Tests cover: happy path, edge cases, error conditions, mock mode behavior
-- Implement minimum code to make tests pass
-
-### Workflow Order for Every Feature
-
+```bash
+git clone https://github.com/Marwan-Alhindi/tinker.git
+cd tinker
+python -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+cp .env.example .env   # fill in ANTHROPIC_API_KEY
 ```
-1. Document first  → write/update the companion .md spec
-2. Test second     → write tests based on the spec (they fail)
-3. Code last       → implement until tests pass
-4. Update docs     → AI updates the .md if new APIs were added
-```
-
-**Division of labor:**
-- Human writes specs, standards, and docs (the *what* and *how*)
-- AI writes tests and code (the *implementation*)
-- Module docs are hybrid — human writes initially, AI updates as it adds functions
-
-### Plan Mode
-
-For every non-trivial feature:
-
-1. **Plan** — AI reads spec + feature request → produces a plan answering:
-   - What files to read?
-   - What files to change?
-   - How to change from current state to desired state?
-2. **Review** — Human checks:
-   - Does it follow DDD → TDD → Code order?
-   - Are all files covered?
-   - Take your time. Ask questions. Request changes.
-3. **Execute (Ralph Loop)** — Once approved:
-   - Feed the plan as prompt
-   - AI executes one iteration
-   - Check success criteria
-   - If not done: feed plan + previous output back
-   - Repeat until done
-   - The plan stays constant, context accumulates
-4. **If it fails** — Don't re-run blindly. Look at *why* it failed and update the plan/docs/tests before trying again.
 
 ## Development Workflow
 
